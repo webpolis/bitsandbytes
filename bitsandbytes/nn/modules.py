@@ -438,7 +438,15 @@ class Linear8bitLt(nn.Linear):
         if self.bias is not None and self.bias.dtype != x.dtype:
             self.bias.data = self.bias.data.to(x.dtype)
 
-        out = bnb.matmul(x, self.weight, bias=self.bias, state=self.state)
+        max_x = max(x.max(), x.min().abs())
+        if max_x >= 6:
+            x = x * (1 / max_x)     
+            out = bnb.matmul(x, self.weight, bias=None, state=self.state)    
+            out = out * max_x
+            if self.bias is not None:
+                out += self.bias
+        else:      
+            out = bnb.matmul(x, self.weight, bias=self.bias, state=self.state)
 
         if not self.state.has_fp16_weights:
             if self.state.CB is not None and self.state.CxB is not None:
