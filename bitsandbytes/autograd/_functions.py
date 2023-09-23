@@ -369,8 +369,11 @@ class MatMul8bitLt(torch.autograd.Function):
 
         if coo_tensorA is not None and not state.has_fp16_weights:
             # extract outliers
-
-            outlier_idx = torch.unique(coo_tensorA.colidx)
+            if coo_tensorA.colidx.shape < 1024:
+                outlier_idx = torch.unique(coo_tensorA.colidx)
+            else:
+                # with many outliers it is best to avoid coslty torch.unique()
+                outlier_idx = torch.arange(A.shape[-1], dtype=torch.int32, device=coo_tensorA.colidx.device)       
             state.idx = outlier_idx
             # state.outlier_pool.add_outliers(outlier_idx, A.shape[-1])
             # if state.use_pool and state.outlier_pool.model_dim == A.shape[-1]:
